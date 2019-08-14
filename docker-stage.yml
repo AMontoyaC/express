@@ -1,0 +1,61 @@
+version: '2'
+
+# External docker network
+networks:
+  default:
+    external:
+      name: nginx-proxy
+  internal:
+    internal: true
+
+volumes:
+  mongo:
+  uploads:
+
+services:
+  mongo:
+    extends:
+      file: docker-services.yml
+      service: mongo
+    volumes:
+      - mongo:/data/db
+    networks:
+      default: {}
+      internal:
+        aliases:
+          - ${DOCKER_PROJECT_NAME}_stage_mongo
+
+  app:
+    image: ${CI_REGISTRY_IMAGE}:stage
+    extends:
+      file: docker-services.yml
+      service: app
+    depends_on:
+      - mongo
+    environment:
+      NODE_ENV: stage
+      DATABASE_URL: mongodb://${DOCKER_PROJECT_NAME}_stage_mongo/backend
+      VIRTUAL_HOST: $VIRTUAL_HOST_STAGE
+      LETSENCRYPT_HOST: $VIRTUAL_HOST_STAGE
+    volumes:
+      - uploads:/opt/backend/app/uploads
+    networks:
+      - default
+      - internal
+
+  mongoexpress:
+    extends:
+      file: docker-services.yml
+      service: mongoexpress
+    depends_on:
+      - mongo
+    environment:
+      # MongoDB Connection Auth Config
+      ME_CONFIG_MONGODB_SERVER: ${DOCKER_PROJECT_NAME}_stage_mongo
+      ME_CONFIG_MONGODB_URL: mongodb://${DOCKER_PROJECT_NAME}_stage_mongo:27017/
+      # nginX SSL Proxy
+      VIRTUAL_HOST: $VIRTUAL_HOST_STAGE_DB
+      LETSENCRYPT_HOST: $VIRTUAL_HOST_STAGE_DB
+    networks:
+      - default
+      - internal

@@ -1,0 +1,65 @@
+version: "2"
+
+services:
+  mongo:
+    image: mongo:3.4.10
+    restart: on-failure
+    ports:
+      - 27017
+
+  app:
+    restart: on-failure
+    ports:
+      - 3000
+    environment:
+      DATABASE_URL: mongodb://mongo/backend
+      PORT: 3000
+      NODE_ENV: development
+      # empty env var will get the value from the host machine
+      DOCKER_PROJECT_NAME:
+      LETSENCRYPT_EMAIL:
+      MAIN_URL:
+
+  mongoexpress:
+    restart: on-failure
+    image: mongo-express
+    ports:
+      - 8081
+    environment:
+      # HTTP Basic Auth
+      ME_CONFIG_BASICAUTH_USERNAME: webadmin
+      ME_CONFIG_BASICAUTH_PASSWORD: wabafet
+      ME_CONFIG_SITE_COOKIESECRET: ad324wars5854dxf
+      ME_CONFIG_SITE_SESSIONSECRET: qr3n35n76l327m63374
+      # empty env var will get the value from the host machine
+      LETSENCRYPT_EMAIL:
+
+  mongobackup:
+    image: deenoize/mongodb-backup-s3
+    restart: on-failure
+    environment:
+      # mongoDB settings
+      MONGODB_DB: backend
+      MONGODB_HOST: mongo
+      MONGODB_PORT: 27017
+      MONGODB_USER:
+      MONGODB_PASS:
+
+      # Backup cronjob settings
+      BACKUP_FOLDER: mongodb/
+      # Everyday at 01:00hrs
+      CRON_TIME: 0 1 * * *
+      TZ: America/Monterrey
+      CRON_TZ: America/Monterrey
+
+      # Uncomment to create a backup when the container is launched
+      # INIT_BACKUP: true
+      # Uncomment to restore from latest when the container is launched
+      # INIT_RESTORE: true
+
+      # AWS S3 Settings
+      BUCKET_REGION: string
+      BUCKET: string
+      # AWS IAM User: S3_NGT
+      AWS_ACCESS_KEY_ID: string
+      AWS_SECRET_ACCESS_KEY: string

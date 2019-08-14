@@ -1,0 +1,36 @@
+version: '2'
+
+# External docker network
+networks:
+  default:
+    external:
+      name: nginx-proxy
+  internal:
+    internal: true
+
+services:
+  mongo:
+    extends:
+      file: docker-services.yml
+      service: mongo
+    networks:
+      default: {}
+      internal:
+        aliases:
+          - ${DOCKER_PROJECT_NAME}_${CI_PIPELINE_ID}_mongo
+
+  app:
+    build: .
+    extends:
+      file: docker-services.yml
+      service: app
+    depends_on:
+      - mongo
+    environment:
+      NODE_ENV: testing
+      DATABASE_URL: mongodb://${DOCKER_PROJECT_NAME}_${CI_PIPELINE_ID}_mongo/backend
+      VIRTUAL_HOST: $VIRTUAL_HOST_TESTING
+      LETSENCRYPT_HOST: $VIRTUAL_HOST_TESTING
+    networks:
+      - default
+      - internal

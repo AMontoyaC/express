@@ -1,0 +1,40 @@
+version: '2'
+
+volumes:
+  mongo:
+
+services:
+  mongo:
+    extends:
+      file: docker-services.yml
+      service: mongo
+    volumes:
+      - mongo:/data/db
+    ports:
+      - 27017:27017
+
+  app:
+    build: .
+    extends:
+      file: docker-services.yml
+      service: app
+    depends_on:
+      - mongo
+    ports:
+      - 3000:3000
+    environment:
+      NODE_ENV: DEVELOPMENT
+      DATABASE_URL: mongodb://mongo/backend
+    # Development mode
+    command: npm run app
+    volumes:
+      - ./app:/opt/backend/app
+
+  mongoexpress:
+    extends:
+      file: docker-services.yml
+      service: mongoexpress
+    depends_on:
+      - mongo
+    ports:
+      - 8081:8081

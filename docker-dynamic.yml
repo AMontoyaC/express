@@ -1,0 +1,60 @@
+version: '2'
+
+# External docker network
+networks:
+  default:
+    external:
+      name: nginx-proxy
+  internal:
+    internal: true
+
+volumes:
+  mongo:
+  uploads:
+
+services:
+  mongo:
+    extends:
+      file: docker-services.yml
+      service: mongo
+    volumes:
+      - mongo:/data/db
+    networks:
+      default: {}
+      internal:
+        aliases:
+          - ${DOCKER_PROJECT_NAME}_${CI_COMMIT_REF_SLUG}_mongo
+
+  app:
+    build: .
+    extends:
+      file: docker-services.yml
+      service: app
+    depends_on:
+      - mongo
+    environment:
+      DATABASE_URL: mongodb://${DOCKER_PROJECT_NAME}_${CI_COMMIT_REF_SLUG}_mongo/backend
+      VIRTUAL_HOST: $VIRTUAL_HOST_DYNAMIC
+      LETSENCRYPT_HOST: $VIRTUAL_HOST_DYNAMIC
+    volumes:
+      - uploads:/opt/backend/app/uploads
+    networks:
+      - default
+      - internal
+
+  mongoexpress:
+    extends:
+      file: docker-services.yml
+      service: mongoexpress
+    depends_on:
+      - mongo
+    environment:
+      # MongoDB Connection Auth Config
+      ME_CONFIG_MONGODB_SERVER: ${DOCKER_PROJECT_NAME}_${CI_COMMIT_REF_SLUG}_mongo
+      ME_CONFIG_MONGODB_URL: mongodb://${DOCKER_PROJECT_NAME}_${CI_COMMIT_REF_SLUG}_mongo:27017/
+      # nginX SSL Proxy
+      VIRTUAL_HOST: $VIRTUAL_HOST_DYNAMIC_DB
+      LETSENCRYPT_HOST: $VIRTUAL_HOST_DYNAMIC_DB
+    networks:
+      - default
+      - internal
